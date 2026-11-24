@@ -7,6 +7,7 @@
       `27017`, `8080`; no new port is consumed.
 - [ ] Fill `C:\Users\raych\.local\share\google-docs-mcp\credentials.env` with the OAuth
       client ID/secret and refresh token, then restart OpenCode's MCP connection.
-- [ ] Push `main` to `raychorn/mcp-google-docs` after the git CLI token is updated
-      (currently 403 on push, although the same account can create repositories).
-- [ ] Push the parent repository's submodule pointer after the submodule is remote-available.
+- [x] Push `main` to `raychorn/mcp-google-docs` after the token's `Contents: write`
+      permission was restored (`1fa14b1`).
+- [x] Push the parent repository's submodule pointer (`1fa1b15`); remote gitlink SHA
+      matches the submodule's `refs/heads/main`.
