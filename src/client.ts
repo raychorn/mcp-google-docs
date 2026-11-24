@@ -1040,7 +1040,7 @@ export class GoogleDocsClient {
     const maxResults = Math.min(Math.max(p.maxResults ?? 5, 1), 25);
 
     // Narrow with Drive's case-insensitive substring match, token by token.
-    const tokens = query.split(/\\s+/).filter(Boolean);
+    const tokens = query.split(/\s+/).filter(Boolean);
     const esc = (s: string) => s.replace(/'/g, "\\\\'");
     let driveQuery = "mimeType='application/vnd.google-apps.document' and trashed=false";
     for (const t of tokens) driveQuery += ` and name contains '${esc(t)}'`;
@@ -1073,7 +1073,11 @@ export class GoogleDocsClient {
       modifiedTime,
     }));
 
-    return { query, candidates };
+    const best = candidates.length && candidates[0].score >= 0.25
+      ? { id: candidates[0].id, name: candidates[0].name, score: candidates[0].score }
+      : null;
+
+    return { query, match: best, candidates };
   }
 
   /** Lists Drive files matching a query, paginated up to pageSize. */
@@ -1207,8 +1211,8 @@ export function fuzzyScore(query: string, name: string): number {
   if (n.includes(q)) return 0.85 + (q.length / n.length) * 0.15;
   if (q.includes(n)) return 0.7 + (n.length / q.length) * 0.15;
 
-  const qTokens = q.split(/\\s+/).filter(Boolean);
-  const nTokens = n.split(/\\s+/).filter(Boolean);
+  const qTokens = q.split(/\s+/).filter(Boolean);
+  const nTokens = n.split(/\s+/).filter(Boolean);
   let overlap = 0;
   for (const t of qTokens) {
     if (nTokens.some((nt) => nt.includes(t) || t.includes(nt))) overlap++;
