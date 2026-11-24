@@ -1,0 +1,10 @@
+.git
+.github
+.cursor-plugin
+node_modules
+dist
+docs
+assets
+test
+*.gif
+*.svg
