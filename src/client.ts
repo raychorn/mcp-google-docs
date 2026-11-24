@@ -1024,6 +1024,81 @@ export class GoogleDocsClient {
     });
   }
 
+  // ---- Document search (Drive, internal dependency) ----
+
+  /**
+   * Searches the authorized user's Drive for Google Docs whose name matches
+   * `query` (substring or fuzzy). Drive's `name contains` is used to narrow the
+   * candidate set, then results are re-ranked client-side with a fuzzy score so
+   * that fragments, typos and partial names resolve to the best single match.
+   * Returns the ranked candidates (best first); the caller picks the top one.
+   */
+  async findDocuments(p: { query: string; maxResults?: number }): Promise<unknown> {
+    const query = p.query.trim();
+    if (!query) throw new Error("query must not be empty");
+
+    const maxResults = Math.min(Math.max(p.maxResults ?? 5, 1), 25);
+
+    // Narrow with Drive's case-insensitive substring match, token by token.
+    const tokens = query.split(/\\s+/).filter(Boolean);
+    const esc = (s: string) => s.replace(/'/g, "\\\\'");
+    let driveQuery = "mimeType='application/vnd.google-apps.document' and trashed=false";
+    for (const t of tokens) driveQuery += ` and name contains '${esc(t)}'`;
+
+    let files = await this.listDriveFiles(driveQuery, 100);
+
+    // Broaden if the token query returned nothing.
+    if (files.length === 0) {
+      const q2 = `mimeType='application/vnd.google-apps.document' and trashed=false and name contains '${esc(query)}'`;
+      files = await this.listDriveFiles(q2, 100);
+    }
+
+    // Last resort: pull a bounded slice of all docs and rank locally.
+    if (files.length === 0) {
+      files = await this.listDriveFiles("mimeType='application/vnd.google-apps.document' and trashed=false", 500);
+    }
+
+    const scored = files.map((f) => ({
+      id: String(f.id),
+      name: String(f.name ?? ""),
+      modifiedTime: f.modifiedTime ? String(f.modifiedTime) : undefined,
+      score: fuzzyScore(query, String(f.name ?? "")),
+    }));
+    scored.sort((a, b) => b.score - a.score || String(b.modifiedTime ?? "").localeCompare(String(a.modifiedTime ?? "")));
+
+    const candidates = scored.slice(0, maxResults).map(({ id, name, score, modifiedTime }) => ({
+      id,
+      name,
+      score: Math.round(score * 1000) / 1000,
+      modifiedTime,
+    }));
+
+    return { query, candidates };
+  }
+
+  /** Lists Drive files matching a query, paginated up to pageSize. */
+  private async listDriveFiles(q: string, pageSize: number): Promise<Array<Record<string, unknown>>> {
+    const out: Array<Record<string, unknown>> = [];
+    let pageToken: string | undefined;
+    do {
+      const res = (await this.send({
+        method: "GET",
+        base: this.driveBase,
+        path: "drive/v3/files",
+        query: compact({
+          q,
+          pageSize: Math.min(pageSize, 1000),
+          pageToken,
+          fields: "nextPageToken,files(id,name,modifiedTime)",
+        }),
+      })) as { files?: Array<Record<string, unknown>>; nextPageToken?: string };
+      out.push(...(res.files ?? []));
+      pageToken = res.nextPageToken;
+      if (out.length >= pageSize) break;
+    } while (pageToken);
+    return out.slice(0, pageSize);
+  }
+
   // ---- Comments (Drive, internal dependency) ----
 
   /** Lists the document's comments with replies and resolution state. */
@@ -1116,4 +1191,49 @@ function decode(bytes: Uint8Array): string {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fuzzy similarity between a query and a file name, in [0, 1]. Combines
+ * exact/containment, token overlap and Levenshtein ratio so that fragments,
+ * partial names and small typos still score well.
+ */
+export function fuzzyScore(query: string, name: string): number {
+  const q = query.toLowerCase().trim();
+  const n = name.toLowerCase().trim();
+  if (!q || !n) return 0;
+  if (n === q) return 1;
+  // Containment: a name that contains the whole query is a strong match.
+  if (n.includes(q)) return 0.85 + (q.length / n.length) * 0.15;
+  if (q.includes(n)) return 0.7 + (n.length / q.length) * 0.15;
+
+  const qTokens = q.split(/\\s+/).filter(Boolean);
+  const nTokens = n.split(/\\s+/).filter(Boolean);
+  let overlap = 0;
+  for (const t of qTokens) {
+    if (nTokens.some((nt) => nt.includes(t) || t.includes(nt))) overlap++;
+  }
+  const tokenScore = qTokens.length ? overlap / qTokens.length : 0;
+
+  const dist = levenshtein(q, n);
+  const levScore = 1 - dist / Math.max(q.length, n.length);
+
+  return Math.max(tokenScore * 0.6 + levScore * 0.4, levScore, tokenScore);
+}
+
+/** Classic Levenshtein edit distance. */
+export function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = cur;
+  }
+  return prev[b.length];
 }

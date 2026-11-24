@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { registerDocumentTools } from "./documents.js";
+import { registerFindTools } from "./find.js";
 import { registerTextTools } from "./text.js";
 import { registerStyleTools } from "./styles.js";
 import { registerTableTools } from "./tables.js";
@@ -27,6 +28,7 @@ function collectAnnotations(): Record<string, Annotations | undefined> {
   };
   // Registration reads the client only inside handlers, so a stub is fine here.
   registerDocumentTools(server as never, {} as never);
+  registerFindTools(server as never, {} as never);
   registerTextTools(server as never, {} as never);
   registerStyleTools(server as never, {} as never);
   registerTableTools(server as never, {} as never);
@@ -46,6 +48,7 @@ const ANN = collectAnnotations();
  */
 const EXPECTED: Record<string, Annotations> = {
   create_document: WRITE,
+  find_document: READ_ONLY,
   get_document: READ_ONLY,
   read_document_text: READ_ONLY,
   list_tabs: READ_ONLY,
@@ -70,7 +73,7 @@ const EXPECTED: Record<string, Annotations> = {
   raw_request: DESTRUCTIVE,
 };
 
-test("registers all twenty-one tools with annotations", () => {
+test("registers all twenty-two tools with annotations", () => {
   assert.deepEqual(Object.keys(ANN).sort(), Object.keys(EXPECTED).sort());
   for (const [name, a] of Object.entries(ANN)) {
     assert.ok(a, `${name} is missing annotations`);
@@ -86,7 +89,7 @@ test("every tool carries exactly its pinned hints (all four set)", () => {
 test("reads stay read-only — none of them may mutate the document", () => {
   // export_document is deliberately absent: with output_path it writes a local
   // file, so it must not carry readOnlyHint even though Docs data never changes.
-  for (const name of ["get_document", "read_document_text", "list_tabs", "list_comments"]) {
+  for (const name of ["find_document", "get_document", "read_document_text", "list_tabs", "list_comments"]) {
     assert.equal(ANN[name]?.readOnlyHint, true, `${name} must be read-only`);
   }
   assert.equal(ANN.export_document?.readOnlyHint, false, "export_document can write a local file");

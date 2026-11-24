@@ -7,6 +7,7 @@ import { ConfigError, DEFAULT_BASE, DEFAULT_DRIVE_BASE, hasCredentials, loadConf
 import { instrumentToolCalls, Telemetry } from "./telemetry.js";
 import type { GoogleDocsConfig } from "./types.js";
 import { registerDocumentTools } from "./tools/documents.js";
+import { registerFindTools } from "./tools/find.js";
 import { registerTextTools } from "./tools/text.js";
 import { registerStyleTools } from "./tools/styles.js";
 import { registerTableTools } from "./tools/tables.js";
@@ -125,6 +126,7 @@ async function main(): Promise<void> {
   const client = new GoogleDocsClient(config, tokenProvider);
 
   registerDocumentTools(server, client);
+  registerFindTools(server, client);
   registerTextTools(server, client);
   registerStyleTools(server, client);
   registerTableTools(server, client);

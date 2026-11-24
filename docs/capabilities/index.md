@@ -1,6 +1,6 @@
 # Google Docs MCP capabilities
 
-This catalog contains 27 public pages—one for every registered MCP tool in `mcp-google-docs`. Each page starts with the user's task, explains the result, and states whether the call changes real data.
+This catalog contains 28 public pages—one for every registered MCP tool in `mcp-google-docs`. Each page starts with the user's task, explains the result, and states whether the call changes real data.
 
 Use this catalog to choose a ready-made capability. Full parameter schemas and API response details remain in the [technical reference](../TOOLS.md).
 
@@ -16,6 +16,7 @@ Use this catalog to choose a ready-made capability. Full parameter schemas and A
 ## Documents and Markdown
 
 - [Create a document](./create-document.md) — Creates a new Google Doc — empty, or converted from Markdown in one call. **Impact:** changes data.
+- [Find a document by name](./find-document.md) — Finds a Google Doc by full or partial name (or a fragment) and resolves the best single match. **Impact:** read-only.
 - [Export a document](./export-document.md) — Exports the document as Markdown, text, HTML or a binary file format. **Impact:** changes data (writes a local file when `output_path` is set; Google Docs itself is untouched).
 - [Get document structure](./get-document.md) — Returns the raw Docs API document with every structural element and index. **Impact:** read-only.
 - [Replace document with Markdown](./import-markdown.md) — Replaces the entire document body with new Markdown via Drive conversion. **Impact:** destructive operation.

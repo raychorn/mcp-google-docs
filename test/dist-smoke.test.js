@@ -10,6 +10,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 
 import { GoogleDocsClient } from "../dist/client.js";
 import { registerDocumentTools } from "../dist/tools/documents.js";
+import { registerFindTools } from "../dist/tools/find.js";
 import { registerTextTools } from "../dist/tools/text.js";
 import { registerStyleTools } from "../dist/tools/styles.js";
 import { registerTableTools } from "../dist/tools/tables.js";
@@ -30,6 +31,7 @@ const ALL_TOOLS = [
   "delete_range",
   "edit_table",
   "export_document",
+  "find_document",
   "finish_login",
   "get_document",
   "import_markdown",
@@ -124,6 +126,7 @@ test("dist registers the expected tools", () => {
 
   registerAuthTools(server, client);
   registerDocumentTools(server, client);
+  registerFindTools(server, client);
   registerTextTools(server, client);
   registerStyleTools(server, client);
   registerTableTools(server, client);

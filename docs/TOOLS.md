@@ -19,6 +19,7 @@ take indexes from a fresh `read_document_text` call, or edit from the end backwa
 | Tool | Description |
 |---|---|
 | `create_document` | Creates a doc. Without `markdown`: `documents.create` (accepts ONLY `title`). With `markdown`: a Drive multipart upload with conversion — Markdown becomes native Docs formatting. Returns the `documentId` (Drive `id` for the Markdown path). |
+| `find_document` | Resolves a Google Doc by full or partial name (or a fragment). Narrows candidates with Drive's `name contains`, then re-ranks by fuzzy similarity; returns `match` (best single doc or null) plus ranked `candidates` (`id`, `name`, `score`, `modifiedTime`). Read-only. |
 | `get_document` | The raw Docs API document: per-tab body with `startIndex`/`endIndex` on every element, text run styles, `inlineObjects` (image ids), header/footer segment ids, lists, `revisionId`. Verbose — prefer `read_document_text` for content. |
 | `read_document_text` | Compact per-tab blocks: paragraphs (`text`, `start`, `end`, heading `style`, `bullet`), tables (`cells[row][col]` text), `[image:<objectId>]` placeholders. The index source for all range tools. |
 | `list_tabs` | The tab tree (`tabId`, `title`, `index`, `nestingLevel`, `childTabs`) without content. Tabs **cannot** be created/renamed/deleted/reordered via the API. |
